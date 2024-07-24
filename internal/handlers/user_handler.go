@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 
@@ -17,7 +18,9 @@ func SpotifyLoginHandler(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, url, http.StatusSeeOther)
 }
 func CallbackHandler(w http.ResponseWriter, r *http.Request) {
-	fmt.Println("waiting for callback")
+
+	fmt.Println("\nwaiting for callback")
+
 	code := r.URL.Query().Get("code")
 	token, err := services.SpotifyAuth.Exchange(context.Background(), code)
 	if err != nil {
@@ -25,15 +28,48 @@ func CallbackHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	fmt.Fprintf(w, "Access Token: %s", token.AccessToken)
 	// Get Spotify user information
-	user, err := services.GetSpotifyUserInfo(token.AccessToken)
+	// Fetch the user's profile information from Spotify
+	client := services.SpotifyAuth.Client(context.Background(), token)
+	resp, err := client.Get("https://api.spotify.com/v1/me")
 	if err != nil {
-		http.Error(w, "Failed to get user info", http.StatusInternalServerError)
+		http.Error(w, "Failed to get user info from Spotify", http.StatusInternalServerError)
+		return
+	}
+	defer resp.Body.Close()
+
+	profile, err := services.FetchProfile(token.AccessToken)
+	if err != nil {
+		http.Error(w, "Failed to fetch profile: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	// Display user information
-	fmt.Fprintf(w, "User Info:\n")
-	fmt.Fprintf(w, "Display Name: %s\n", user.DisplayName)
-	fmt.Fprintf(w, "ID: %s\n", user.ID)
-	fmt.Fprintf(w, "Email: %s\n", user.Email)
+	// Check if the user exists, and create if not
+	user, err := services.FindOrCreateUser(profile)
+
+	if err != nil {
+		http.Error(w, "Failed to find or create user", http.StatusInternalServerError)
+		return
+	}
+
+	// Return the access token or any other necessary information
+	fmt.Println("login succesfull")
+	fmt.Fprintf(w, "Access Token: %s\n", token.AccessToken)
+	fmt.Fprintf(w, "User: %+v\n", user)
+	fmt.Fprintf(w, "Access Token: %s\n", token.AccessToken)
+	fmt.Fprintf(w, "Profile ID: %s\n", profile.ID)
+	fmt.Fprintf(w, "Email: %s\n", profile.Email)
+
 }
+
+func GetUsersHandler(w http.ResponseWriter, r *http.Request) {
+	users, err := services.GetAllUsers()
+	if err != nil {
+		http.Error(w, "Failed to retrieve users", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(users)
+}
+
+// FetchProfile fetches the user's Spotify profile using the access token

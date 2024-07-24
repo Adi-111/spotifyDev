@@ -10,14 +10,16 @@ import (
 )
 
 func main() {
+
 	fmt.Println("Initializing.....")
-	r := mux.NewRouter()
+	r := mux.NewRouter() // creating router with gorilla-mux
 	fmt.Println("Router Created.....")
+	routes.RegisterRoutes(r) // registering the routes to server
+	staticDir := "../static"
+	fileServer := http.FileServer(http.Dir(staticDir))
+	r.PathPrefix("/").Handler(fileServer)
 
-	routes.RegisterRoutes(r)
-	http.Handle("/", r)
-
+	fmt.Println("Server is starting on http://localhost:8080")
 	log.Fatal(http.ListenAndServe("localhost:8080", r))
-	fmt.Println("online on http://localhost:8080")
 
 }
