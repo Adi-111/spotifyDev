@@ -85,7 +85,11 @@ func FindOrCreateUser(profile *SpotifyUser) (*models.User, error) {
 		SpotifyID:   profile.ID,
 		DisplayName: profile.DisplayName,
 		Email:       profile.Email,
-		Password:    "", // You might want to handle passwords differently
+		Country:     profile.Country,
+		Href:        profile.Href,
+		Type:        profile.Type,
+
+		Password: "", // You might want to handle passwords differently
 	}
 
 	if err := config.DB.Create(&user).Error; err != nil {

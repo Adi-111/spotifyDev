@@ -1,13 +1,18 @@
 package models
 
-import "gorm.io/gorm"
+import (
+	"gorm.io/gorm"
+)
 
 type User struct {
 	gorm.Model
 	ID          uint   `gorm:"primaryKey"`
 	Username    string `gorm:"unique;not null"`
 	Email       string `gorm:"unique;not null"`
-	Password    string `gorm:"not null"`
+	Password    string
+	Country     string `gorm:"not null"`
 	SpotifyID   string `gorm:"uniqueIndex;not null"`
-	DisplayName string
+	Href        string `gorm:"not null"`
+	Type        string `gorm:"not null"`
+	DisplayName string `gorm:"not null"`
 }
